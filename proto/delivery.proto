@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package delivery;
+
+service DeliveryService {
+  rpc CreateDelivery (CreateDeliveryRequest) returns (DeliveryResponse);
+  rpc GetDelivery (GetDeliveryRequest) returns (DeliveryResponse);
+  rpc ListDeliveries (Empty) returns (DeliveryListResponse);
+  rpc UpdateDeliveryStatus (UpdateDeliveryStatusRequest) returns (DeliveryResponse);
+}
+
+message Empty {}
+
+message CreateDeliveryRequest {
+  int32 order_id = 1;
+  int32 driver_id = 2;
+  string pickup_address = 3;
+  string delivery_address = 4;
+  string status = 5;
+}
+
+message GetDeliveryRequest {
+  int32 id = 1;
+}
+
+message UpdateDeliveryStatusRequest {
+  int32 id = 1;
+  string status = 2;
+}
+
+message DeliveryResponse {
+  int32 id = 1;
+  int32 order_id = 2;
+  int32 driver_id = 3;
+  string pickup_address = 4;
+  string delivery_address = 5;
+  string status = 6;
+}
+
+message DeliveryListResponse {
+  repeated DeliveryResponse deliveries = 1;
+}
