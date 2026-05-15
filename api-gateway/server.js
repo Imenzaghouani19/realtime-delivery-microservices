@@ -2,6 +2,8 @@ const express = require("express");
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
+const { graphqlHTTP } = require("express-graphql");
+const { buildSchema } = require("graphql");
 
 const app = express();
 app.use(express.json());
@@ -60,11 +62,12 @@ const driverClient = new driversProto.DriverService(
     grpc.credentials.createInsecure()
 );
 
+// Home route
 app.get("/", (req, res) => {
     res.send("API Gateway is running");
 });
 
-// Orders routes
+// Orders REST routes
 app.post("/orders", (req, res) => {
     const orderData = {
         customer_name: req.body.customer_name,
@@ -119,7 +122,7 @@ app.patch("/orders/:id/status", (req, res) => {
     );
 });
 
-// Delivery routes
+// Delivery REST routes
 app.post("/deliveries", (req, res) => {
     const deliveryData = {
         order_id: Number(req.body.order_id),
@@ -174,7 +177,7 @@ app.patch("/deliveries/:id/status", (req, res) => {
     );
 });
 
-// Drivers routes
+// Drivers REST routes
 app.post("/drivers", (req, res) => {
     const driverData = {
         name: req.body.name,
@@ -246,6 +249,133 @@ app.patch("/drivers/:id/location", (req, res) => {
         }
     );
 });
+
+// GraphQL schema
+const schema = buildSchema(`
+    type Order {
+        id: Int
+        customer_name: String
+        customer_phone: String
+        pickup_address: String
+        delivery_address: String
+        status: String
+    }
+
+    type Delivery {
+        id: Int
+        order_id: Int
+        driver_id: Int
+        pickup_address: String
+        delivery_address: String
+        status: String
+    }
+
+    type Driver {
+        id: Int
+        name: String
+        phone: String
+        vehicle_type: String
+        available: Boolean
+        latitude: Float
+        longitude: Float
+    }
+
+    type Query {
+        orders: [Order]
+        order(id: Int!): Order
+
+        deliveries: [Delivery]
+        delivery(id: Int!): Delivery
+
+        drivers: [Driver]
+        driver(id: Int!): Driver
+    }
+`);
+
+// GraphQL resolvers
+const root = {
+    orders: () => {
+        return new Promise((resolve, reject) => {
+            orderClient.ListOrders({}, (error, response) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(response.orders);
+                }
+            });
+        });
+    },
+
+    order: ({ id }) => {
+        return new Promise((resolve, reject) => {
+            orderClient.GetOrder({ id }, (error, response) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+    },
+
+    deliveries: () => {
+        return new Promise((resolve, reject) => {
+            deliveryClient.ListDeliveries({}, (error, response) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(response.deliveries);
+                }
+            });
+        });
+    },
+
+    delivery: ({ id }) => {
+        return new Promise((resolve, reject) => {
+            deliveryClient.GetDelivery({ id }, (error, response) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+    },
+
+    drivers: () => {
+        return new Promise((resolve, reject) => {
+            driverClient.ListDrivers({}, (error, response) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(response.drivers);
+                }
+            });
+        });
+    },
+
+    driver: ({ id }) => {
+        return new Promise((resolve, reject) => {
+            driverClient.GetDriver({ id }, (error, response) => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve(response);
+                }
+            });
+        });
+    },
+};
+
+// GraphQL endpoint
+app.use(
+    "/graphql",
+    graphqlHTTP({
+        schema,
+        rootValue: root,
+        graphiql: true,
+    })
+);
 
 const PORT = 3000;
 
