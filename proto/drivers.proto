@@ -8,6 +8,7 @@ service DriverService {
   rpc ListDrivers (Empty) returns (DriverListResponse);
   rpc UpdateDriverAvailability (UpdateDriverAvailabilityRequest) returns (DriverResponse);
   rpc UpdateDriverLocation (UpdateDriverLocationRequest) returns (DriverResponse);
+  rpc DeleteDriver (DeleteDriverRequest) returns (DeleteDriverResponse);
 }
 
 message Empty {}
@@ -48,4 +49,12 @@ message DriverResponse {
 
 message DriverListResponse {
   repeated DriverResponse drivers = 1;
+}
+message DeleteDriverRequest {
+  int32 id = 1;
+}
+
+message DeleteDriverResponse {
+  bool success = 1;
+  string message = 2;
 }

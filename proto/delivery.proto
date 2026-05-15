@@ -7,6 +7,7 @@ service DeliveryService {
   rpc GetDelivery (GetDeliveryRequest) returns (DeliveryResponse);
   rpc ListDeliveries (Empty) returns (DeliveryListResponse);
   rpc UpdateDeliveryStatus (UpdateDeliveryStatusRequest) returns (DeliveryResponse);
+  rpc DeleteDelivery (DeleteDeliveryRequest) returns (DeleteDeliveryResponse);
 }
 
 message Empty {}
@@ -39,4 +40,13 @@ message DeliveryResponse {
 
 message DeliveryListResponse {
   repeated DeliveryResponse deliveries = 1;
+}
+
+message DeleteDeliveryRequest {
+  int32 id = 1;
+}
+
+message DeleteDeliveryResponse {
+  bool success = 1;
+  string message = 2;
 }

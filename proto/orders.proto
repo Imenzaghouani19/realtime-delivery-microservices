@@ -7,6 +7,7 @@ service OrderService {
   rpc GetOrder (GetOrderRequest) returns (OrderResponse);
   rpc ListOrders (Empty) returns (OrderListResponse);
   rpc UpdateOrderStatus (UpdateOrderStatusRequest) returns (OrderResponse);
+  rpc DeleteOrder (DeleteOrderRequest) returns (DeleteOrderResponse);
 }
 
 message Empty {}
@@ -39,4 +40,12 @@ message OrderResponse {
 
 message OrderListResponse {
   repeated OrderResponse orders = 1;
+}
+message DeleteOrderRequest {
+  int32 id = 1;
+}
+
+message DeleteOrderResponse {
+  bool success = 1;
+  string message = 2;
 }
