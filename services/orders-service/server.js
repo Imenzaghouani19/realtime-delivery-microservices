@@ -136,6 +136,31 @@ function UpdateOrderStatus(call, callback) {
     });
 }
 
+function DeleteOrder(call, callback) {
+    const sql = "DELETE FROM orders WHERE id = ?";
+
+    db.run(sql, [call.request.id], function (error) {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        if (this.changes === 0) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Order not found",
+            });
+        }
+
+        callback(null, {
+            success: true,
+            message: "Order deleted successfully",
+        });
+    });
+}
+
 const server = new grpc.Server();
 
 server.addService(ordersProto.OrderService.service, {
@@ -143,6 +168,7 @@ server.addService(ordersProto.OrderService.service, {
     GetOrder,
     ListOrders,
     UpdateOrderStatus,
+    DeleteOrder,
 });
 
 if (process.env.KAFKA_ENABLED === "true") {

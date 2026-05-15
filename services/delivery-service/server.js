@@ -134,6 +134,31 @@ function UpdateDeliveryStatus(call, callback) {
     );
 }
 
+function DeleteDelivery(call, callback) {
+    const sql = "DELETE FROM deliveries WHERE id = ?";
+
+    db.run(sql, [call.request.id], function (error) {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        if (this.changes === 0) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Delivery not found",
+            });
+        }
+
+        callback(null, {
+            success: true,
+            message: "Delivery deleted successfully",
+        });
+    });
+}
+
 const server = new grpc.Server();
 
 server.addService(deliveryProto.DeliveryService.service, {
@@ -141,6 +166,7 @@ server.addService(deliveryProto.DeliveryService.service, {
     GetDelivery,
     ListDeliveries,
     UpdateDeliveryStatus,
+    DeleteDelivery,
 });
 
 if (process.env.KAFKA_ENABLED === "true") {

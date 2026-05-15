@@ -189,6 +189,31 @@ function UpdateDriverLocation(call, callback) {
     );
 }
 
+function DeleteDriver(call, callback) {
+    const sql = "DELETE FROM drivers WHERE id = ?";
+
+    db.run(sql, [call.request.id], function (error) {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        if (this.changes === 0) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Driver not found",
+            });
+        }
+
+        callback(null, {
+            success: true,
+            message: "Driver deleted successfully",
+        });
+    });
+}
+
 const server = new grpc.Server();
 
 server.addService(driversProto.DriverService.service, {
@@ -197,6 +222,7 @@ server.addService(driversProto.DriverService.service, {
     ListDrivers,
     UpdateDriverAvailability,
     UpdateDriverLocation,
+    DeleteDriver,
 });
 
 server.bindAsync(
