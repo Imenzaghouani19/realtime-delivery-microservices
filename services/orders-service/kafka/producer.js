@@ -1,3 +1,6 @@
+
+
+process.env.KAFKAJS_NO_PARTITIONER_WARNING = "1";
 const { Kafka } = require("kafkajs");
 
 const kafka = new Kafka({

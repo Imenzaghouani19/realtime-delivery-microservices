@@ -3,6 +3,7 @@ const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
 const db = require("./database/db");
 const { connectProducer, publishOrderCreated } = require("./kafka/producer");
+
 const PROTO_PATH = path.join(__dirname, "../../proto/orders.proto");
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -48,17 +49,17 @@ function CreateOrder(call, callback) {
             }
 
             const createdOrder = {
-    id: this.lastID,
-    customer_name,
-    customer_phone,
-    pickup_address,
-    delivery_address,
-    status,
-};
+                id: this.lastID,
+                customer_name,
+                customer_phone,
+                pickup_address,
+                delivery_address,
+                status,
+            };
 
-publishOrderCreated(createdOrder);
+            publishOrderCreated(createdOrder);
 
-callback(null, createdOrder);
+            callback(null, createdOrder);
         }
     );
 }
@@ -143,7 +144,13 @@ server.addService(ordersProto.OrderService.service, {
     ListOrders,
     UpdateOrderStatus,
 });
-connectProducer();
+
+if (process.env.KAFKA_ENABLED === "true") {
+    connectProducer();
+} else {
+    console.log("Kafka producer disabled");
+}
+
 server.bindAsync(
     "0.0.0.0:50051",
     grpc.ServerCredentials.createInsecure(),

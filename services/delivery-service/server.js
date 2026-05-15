@@ -3,6 +3,7 @@ const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
 const db = require("./database/db");
 const { startOrderCreatedConsumer } = require("./kafka/consumer");
+
 const PROTO_PATH = path.join(__dirname, "../../proto/delivery.proto");
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -141,7 +142,13 @@ server.addService(deliveryProto.DeliveryService.service, {
     ListDeliveries,
     UpdateDeliveryStatus,
 });
-startOrderCreatedConsumer();
+
+if (process.env.KAFKA_ENABLED === "true") {
+    startOrderCreatedConsumer();
+} else {
+    console.log("Kafka consumer disabled");
+}
+
 server.bindAsync(
     "0.0.0.0:50052",
     grpc.ServerCredentials.createInsecure(),
