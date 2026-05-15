@@ -1,6 +1,7 @@
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
+const db = require("./database/db");
 
 const PROTO_PATH = path.join(__dirname, "../../proto/drivers.proto");
 
@@ -14,69 +15,178 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const driversProto = grpc.loadPackageDefinition(packageDefinition).drivers;
 
-let drivers = [];
-let currentId = 1;
-
 function CreateDriver(call, callback) {
-    const driver = {
-        id: currentId++,
-        name: call.request.name,
-        phone: call.request.phone,
-        vehicle_type: call.request.vehicle_type,
-        available: call.request.available,
-        latitude: call.request.latitude,
-        longitude: call.request.longitude,
-    };
+    const {
+        name,
+        phone,
+        vehicle_type,
+        latitude,
+        longitude,
+    } = call.request;
 
-    drivers.push(driver);
-    callback(null, driver);
+    const available = call.request.available ? 1 : 0;
+
+    const sql = `
+        INSERT INTO drivers (
+            name,
+            phone,
+            vehicle_type,
+            available,
+            latitude,
+            longitude
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.run(
+        sql,
+        [name, phone, vehicle_type, available, latitude, longitude],
+        function (error) {
+            if (error) {
+                return callback({
+                    code: grpc.status.INTERNAL,
+                    message: error.message,
+                });
+            }
+
+            callback(null, {
+                id: this.lastID,
+                name,
+                phone,
+                vehicle_type,
+                available: Boolean(available),
+                latitude,
+                longitude,
+            });
+        }
+    );
 }
 
 function GetDriver(call, callback) {
-    const driver = drivers.find((item) => item.id === call.request.id);
+    db.get(
+        "SELECT * FROM drivers WHERE id = ?",
+        [call.request.id],
+        (error, row) => {
+            if (error) {
+                return callback({
+                    code: grpc.status.INTERNAL,
+                    message: error.message,
+                });
+            }
 
-    if (!driver) {
-        return callback({
-            code: grpc.status.NOT_FOUND,
-            message: "Driver not found",
-        });
-    }
+            if (!row) {
+                return callback({
+                    code: grpc.status.NOT_FOUND,
+                    message: "Driver not found",
+                });
+            }
 
-    callback(null, driver);
+            callback(null, {
+                ...row,
+                available: Boolean(row.available),
+            });
+        }
+    );
 }
 
 function ListDrivers(call, callback) {
-    callback(null, { drivers });
+    db.all("SELECT * FROM drivers", [], (error, rows) => {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        const drivers = rows.map((driver) => ({
+            ...driver,
+            available: Boolean(driver.available),
+        }));
+
+        callback(null, { drivers });
+    });
 }
 
 function UpdateDriverAvailability(call, callback) {
-    const driver = drivers.find((item) => item.id === call.request.id);
+    const available = call.request.available ? 1 : 0;
 
-    if (!driver) {
-        return callback({
-            code: grpc.status.NOT_FOUND,
-            message: "Driver not found",
-        });
-    }
+    db.run(
+        "UPDATE drivers SET available = ? WHERE id = ?",
+        [available, call.request.id],
+        function (error) {
+            if (error) {
+                return callback({
+                    code: grpc.status.INTERNAL,
+                    message: error.message,
+                });
+            }
 
-    driver.available = call.request.available;
-    callback(null, driver);
+            if (this.changes === 0) {
+                return callback({
+                    code: grpc.status.NOT_FOUND,
+                    message: "Driver not found",
+                });
+            }
+
+            db.get(
+                "SELECT * FROM drivers WHERE id = ?",
+                [call.request.id],
+                (selectError, row) => {
+                    if (selectError) {
+                        return callback({
+                            code: grpc.status.INTERNAL,
+                            message: selectError.message,
+                        });
+                    }
+
+                    callback(null, {
+                        ...row,
+                        available: Boolean(row.available),
+                    });
+                }
+            );
+        }
+    );
 }
 
 function UpdateDriverLocation(call, callback) {
-    const driver = drivers.find((item) => item.id === call.request.id);
+    db.run(
+        "UPDATE drivers SET latitude = ?, longitude = ? WHERE id = ?",
+        [call.request.latitude, call.request.longitude, call.request.id],
+        function (error) {
+            if (error) {
+                return callback({
+                    code: grpc.status.INTERNAL,
+                    message: error.message,
+                });
+            }
 
-    if (!driver) {
-        return callback({
-            code: grpc.status.NOT_FOUND,
-            message: "Driver not found",
-        });
-    }
+            if (this.changes === 0) {
+                return callback({
+                    code: grpc.status.NOT_FOUND,
+                    message: "Driver not found",
+                });
+            }
 
-    driver.latitude = call.request.latitude;
-    driver.longitude = call.request.longitude;
+            db.get(
+                "SELECT * FROM drivers WHERE id = ?",
+                [call.request.id],
+                (selectError, row) => {
+                    if (selectError) {
+                        return callback({
+                            code: grpc.status.INTERNAL,
+                            message: selectError.message,
+                        });
+                    }
 
-    callback(null, driver);
+                    callback(null, {
+                        ...row,
+                        available: Boolean(row.available),
+                    });
+                }
+            );
+        }
+    );
 }
 
 const server = new grpc.Server();
