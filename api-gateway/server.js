@@ -42,7 +42,6 @@ const deliveryClient = new deliveryProto.DeliveryService(
     grpc.credentials.createInsecure()
 );
 
-
 // Drivers proto
 const DRIVERS_PROTO_PATH = path.join(__dirname, "../proto/drivers.proto");
 
@@ -60,9 +59,6 @@ const driverClient = new driversProto.DriverService(
     "localhost:50053",
     grpc.credentials.createInsecure()
 );
-
-
-
 
 app.get("/", (req, res) => {
     res.send("API Gateway is running");
@@ -177,10 +173,6 @@ app.patch("/deliveries/:id/status", (req, res) => {
         }
     );
 });
-
-
-
-
 
 // Drivers routes
 app.post("/drivers", (req, res) => {
