@@ -2,7 +2,7 @@ const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
 const db = require("./database/db");
-
+const { connectProducer, publishOrderCreated } = require("./kafka/producer");
 const PROTO_PATH = path.join(__dirname, "../../proto/orders.proto");
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -47,14 +47,18 @@ function CreateOrder(call, callback) {
                 });
             }
 
-            callback(null, {
-                id: this.lastID,
-                customer_name,
-                customer_phone,
-                pickup_address,
-                delivery_address,
-                status,
-            });
+            const createdOrder = {
+    id: this.lastID,
+    customer_name,
+    customer_phone,
+    pickup_address,
+    delivery_address,
+    status,
+};
+
+publishOrderCreated(createdOrder);
+
+callback(null, createdOrder);
         }
     );
 }
@@ -139,7 +143,7 @@ server.addService(ordersProto.OrderService.service, {
     ListOrders,
     UpdateOrderStatus,
 });
-
+connectProducer();
 server.bindAsync(
     "0.0.0.0:50051",
     grpc.ServerCredentials.createInsecure(),

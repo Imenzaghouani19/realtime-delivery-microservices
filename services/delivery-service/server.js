@@ -2,7 +2,7 @@ const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
 const db = require("./database/db");
-
+const { startOrderCreatedConsumer } = require("./kafka/consumer");
 const PROTO_PATH = path.join(__dirname, "../../proto/delivery.proto");
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -141,7 +141,7 @@ server.addService(deliveryProto.DeliveryService.service, {
     ListDeliveries,
     UpdateDeliveryStatus,
 });
-
+startOrderCreatedConsumer();
 server.bindAsync(
     "0.0.0.0:50052",
     grpc.ServerCredentials.createInsecure(),
