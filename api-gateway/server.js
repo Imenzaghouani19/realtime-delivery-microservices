@@ -42,6 +42,28 @@ const deliveryClient = new deliveryProto.DeliveryService(
     grpc.credentials.createInsecure()
 );
 
+
+// Drivers proto
+const DRIVERS_PROTO_PATH = path.join(__dirname, "../proto/drivers.proto");
+
+const driversPackageDefinition = protoLoader.loadSync(DRIVERS_PROTO_PATH, {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+});
+
+const driversProto = grpc.loadPackageDefinition(driversPackageDefinition).drivers;
+
+const driverClient = new driversProto.DriverService(
+    "localhost:50053",
+    grpc.credentials.createInsecure()
+);
+
+
+
+
 app.get("/", (req, res) => {
     res.send("API Gateway is running");
 });
@@ -145,6 +167,83 @@ app.patch("/deliveries/:id/status", (req, res) => {
         {
             id: Number(req.params.id),
             status: req.body.status,
+        },
+        (error, response) => {
+            if (error) {
+                return res.status(404).json({ message: error.message });
+            }
+
+            res.json(response);
+        }
+    );
+});
+
+
+
+
+
+// Drivers routes
+app.post("/drivers", (req, res) => {
+    const driverData = {
+        name: req.body.name,
+        phone: req.body.phone,
+        vehicle_type: req.body.vehicle_type,
+        available: req.body.available,
+        latitude: Number(req.body.latitude),
+        longitude: Number(req.body.longitude),
+    };
+
+    driverClient.CreateDriver(driverData, (error, response) => {
+        if (error) {
+            return res.status(500).json({ message: error.message });
+        }
+
+        res.status(201).json(response);
+    });
+});
+
+app.get("/drivers", (req, res) => {
+    driverClient.ListDrivers({}, (error, response) => {
+        if (error) {
+            return res.status(500).json({ message: error.message });
+        }
+
+        res.json(response.drivers);
+    });
+});
+
+app.get("/drivers/:id", (req, res) => {
+    driverClient.GetDriver({ id: Number(req.params.id) }, (error, response) => {
+        if (error) {
+            return res.status(404).json({ message: error.message });
+        }
+
+        res.json(response);
+    });
+});
+
+app.patch("/drivers/:id/availability", (req, res) => {
+    driverClient.UpdateDriverAvailability(
+        {
+            id: Number(req.params.id),
+            available: req.body.available,
+        },
+        (error, response) => {
+            if (error) {
+                return res.status(404).json({ message: error.message });
+            }
+
+            res.json(response);
+        }
+    );
+});
+
+app.patch("/drivers/:id/location", (req, res) => {
+    driverClient.UpdateDriverLocation(
+        {
+            id: Number(req.params.id),
+            latitude: Number(req.body.latitude),
+            longitude: Number(req.body.longitude),
         },
         (error, response) => {
             if (error) {
