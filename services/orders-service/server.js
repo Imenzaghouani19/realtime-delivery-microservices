@@ -1,8 +1,25 @@
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
+const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
 const PROTO_PATH = path.join(__dirname, "../../proto/orders.proto");
+const DB_PATH = path.join(__dirname, "orders.db");
+
+const db = new sqlite3.Database(DB_PATH);
+
+db.serialize(() => {
+    db.run(`
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_name TEXT NOT NULL,
+            customer_phone TEXT NOT NULL,
+            pickup_address TEXT NOT NULL,
+            delivery_address TEXT NOT NULL,
+            status TEXT NOT NULL
+        )
+    `);
+});
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
     keepCase: true,
@@ -14,52 +31,97 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const ordersProto = grpc.loadPackageDefinition(packageDefinition).orders;
 
-let orders = [];
-let currentId = 1;
-
 function CreateOrder(call, callback) {
-    const order = {
-        id: currentId++,
-        customer_name: call.request.customer_name,
-        customer_phone: call.request.customer_phone,
-        pickup_address: call.request.pickup_address,
-        delivery_address: call.request.delivery_address,
-        status: call.request.status || "CREATED",
-    };
+    const { customer_name, customer_phone, pickup_address, delivery_address } = call.request;
+    const status = call.request.status || "CREATED";
 
-    orders.push(order);
-    callback(null, order);
+    const sql = `
+        INSERT INTO orders 
+        (customer_name, customer_phone, pickup_address, delivery_address, status)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+
+    db.run(sql, [customer_name, customer_phone, pickup_address, delivery_address, status], function (error) {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        callback(null, {
+            id: this.lastID,
+            customer_name,
+            customer_phone,
+            pickup_address,
+            delivery_address,
+            status,
+        });
+    });
 }
 
 function GetOrder(call, callback) {
-    const order = orders.find((item) => item.id === call.request.id);
+    db.get("SELECT * FROM orders WHERE id = ?", [call.request.id], (error, row) => {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
 
-    if (!order) {
-        return callback({
-            code: grpc.status.NOT_FOUND,
-            message: "Order not found",
-        });
-    }
+        if (!row) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Order not found",
+            });
+        }
 
-    callback(null, order);
+        callback(null, row);
+    });
 }
 
 function ListOrders(call, callback) {
-    callback(null, { orders });
+    db.all("SELECT * FROM orders", [], (error, rows) => {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        callback(null, { orders: rows });
+    });
 }
 
 function UpdateOrderStatus(call, callback) {
-    const order = orders.find((item) => item.id === call.request.id);
+    const { id, status } = call.request;
 
-    if (!order) {
-        return callback({
-            code: grpc.status.NOT_FOUND,
-            message: "Order not found",
+    db.run("UPDATE orders SET status = ? WHERE id = ?", [status, id], function (error) {
+        if (error) {
+            return callback({
+                code: grpc.status.INTERNAL,
+                message: error.message,
+            });
+        }
+
+        if (this.changes === 0) {
+            return callback({
+                code: grpc.status.NOT_FOUND,
+                message: "Order not found",
+            });
+        }
+
+        db.get("SELECT * FROM orders WHERE id = ?", [id], (selectError, row) => {
+            if (selectError) {
+                return callback({
+                    code: grpc.status.INTERNAL,
+                    message: selectError.message,
+                });
+            }
+
+            callback(null, row);
         });
-    }
-
-    order.status = call.request.status;
-    callback(null, order);
+    });
 }
 
 const server = new grpc.Server();
@@ -76,6 +138,5 @@ server.bindAsync(
     grpc.ServerCredentials.createInsecure(),
     () => {
         console.log("Orders gRPC service running on port 50051");
-        server.start();
     }
 );
