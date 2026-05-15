@@ -122,6 +122,16 @@ app.patch("/orders/:id/status", (req, res) => {
     );
 });
 
+app.delete("/orders/:id", (req, res) => {
+    orderClient.DeleteOrder({ id: Number(req.params.id) }, (error, response) => {
+        if (error) {
+            return res.status(404).json({ message: error.message });
+        }
+
+        res.json(response);
+    });
+});
+
 // Delivery REST routes
 app.post("/deliveries", (req, res) => {
     const deliveryData = {
@@ -167,6 +177,19 @@ app.patch("/deliveries/:id/status", (req, res) => {
             id: Number(req.params.id),
             status: req.body.status,
         },
+        (error, response) => {
+            if (error) {
+                return res.status(404).json({ message: error.message });
+            }
+
+            res.json(response);
+        }
+    );
+});
+
+app.delete("/deliveries/:id", (req, res) => {
+    deliveryClient.DeleteDelivery(
+        { id: Number(req.params.id) },
         (error, response) => {
             if (error) {
                 return res.status(404).json({ message: error.message });
@@ -250,6 +273,16 @@ app.patch("/drivers/:id/location", (req, res) => {
     );
 });
 
+app.delete("/drivers/:id", (req, res) => {
+    driverClient.DeleteDriver({ id: Number(req.params.id) }, (error, response) => {
+        if (error) {
+            return res.status(404).json({ message: error.message });
+        }
+
+        res.json(response);
+    });
+});
+
 // GraphQL schema
 const schema = buildSchema(`
     type Order {
@@ -297,11 +330,8 @@ const root = {
     orders: () => {
         return new Promise((resolve, reject) => {
             orderClient.ListOrders({}, (error, response) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(response.orders);
-                }
+                if (error) reject(error);
+                else resolve(response.orders);
             });
         });
     },
@@ -309,11 +339,8 @@ const root = {
     order: ({ id }) => {
         return new Promise((resolve, reject) => {
             orderClient.GetOrder({ id }, (error, response) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(response);
-                }
+                if (error) reject(error);
+                else resolve(response);
             });
         });
     },
@@ -321,11 +348,8 @@ const root = {
     deliveries: () => {
         return new Promise((resolve, reject) => {
             deliveryClient.ListDeliveries({}, (error, response) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(response.deliveries);
-                }
+                if (error) reject(error);
+                else resolve(response.deliveries);
             });
         });
     },
@@ -333,11 +357,8 @@ const root = {
     delivery: ({ id }) => {
         return new Promise((resolve, reject) => {
             deliveryClient.GetDelivery({ id }, (error, response) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(response);
-                }
+                if (error) reject(error);
+                else resolve(response);
             });
         });
     },
@@ -345,11 +366,8 @@ const root = {
     drivers: () => {
         return new Promise((resolve, reject) => {
             driverClient.ListDrivers({}, (error, response) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(response.drivers);
-                }
+                if (error) reject(error);
+                else resolve(response.drivers);
             });
         });
     },
@@ -357,11 +375,8 @@ const root = {
     driver: ({ id }) => {
         return new Promise((resolve, reject) => {
             driverClient.GetDriver({ id }, (error, response) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve(response);
-                }
+                if (error) reject(error);
+                else resolve(response);
             });
         });
     },
