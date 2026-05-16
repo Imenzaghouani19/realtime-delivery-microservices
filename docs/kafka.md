@@ -64,6 +64,25 @@ $env:KAFKA_ENABLED="true"
 node server.js
 ```
 
-## Remarque
+## Test réalisé
 
-Si Kafka n'est pas lancé, une erreur de connexion à `localhost:9092` peut apparaître. Cette erreur signifie seulement que le broker Kafka n'est pas encore démarré.
+Kafka a été testé localement avec le broker lancé sur `localhost:9092`.
+
+Après la création d'une commande avec l'endpoint REST `POST /orders`, Orders Service publie l'événement `order.created`.
+
+Delivery Service reçoit ensuite l'événement dans son terminal.
+
+Exemple observé :
+
+```text
+Kafka event received in Delivery Service
+Topic: order.created
+Event: order.created
+Order data: {
+  id: 3,
+  customer_name: 'Imen',
+  customer_phone: '12345678',
+  pickup_address: 'Tunis Centre',
+  delivery_address: 'Ariana',
+  status: 'CREATED'
+}
