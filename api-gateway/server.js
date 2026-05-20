@@ -313,6 +313,11 @@ const schema = buildSchema(`
         longitude: Float
     }
 
+    type DeleteResponse {
+        success: Boolean
+        message: String
+    }
+
     type Query {
         orders: [Order]
         order(id: Int!): Order
@@ -322,6 +327,66 @@ const schema = buildSchema(`
 
         drivers: [Driver]
         driver(id: Int!): Driver
+    }
+
+    type Mutation {
+        createOrder(
+            customer_name: String!
+            customer_phone: String!
+            pickup_address: String!
+            delivery_address: String!
+            status: String
+        ): Order
+
+        updateOrderStatus(
+            id: Int!
+            status: String!
+        ): Order
+
+        deleteOrder(
+            id: Int!
+        ): DeleteResponse
+
+        createDelivery(
+            order_id: Int!
+            driver_id: Int!
+            pickup_address: String!
+            delivery_address: String!
+            status: String
+        ): Delivery
+
+        updateDeliveryStatus(
+            id: Int!
+            status: String!
+        ): Delivery
+
+        deleteDelivery(
+            id: Int!
+        ): DeleteResponse
+
+        createDriver(
+            name: String!
+            phone: String!
+            vehicle_type: String!
+            available: Boolean!
+            latitude: Float!
+            longitude: Float!
+        ): Driver
+
+        updateDriverAvailability(
+            id: Int!
+            available: Boolean!
+        ): Driver
+
+        updateDriverLocation(
+            id: Int!
+            latitude: Float!
+            longitude: Float!
+        ): Driver
+
+        deleteDriver(
+            id: Int!
+        ): DeleteResponse
     }
 `);
 
@@ -375,6 +440,130 @@ const root = {
     driver: ({ id }) => {
         return new Promise((resolve, reject) => {
             driverClient.GetDriver({ id }, (error, response) => {
+                if (error) reject(error);
+                else resolve(response);
+            });
+        });
+    },
+
+    createOrder: (args) => {
+        return new Promise((resolve, reject) => {
+            orderClient.CreateOrder(
+                {
+                    customer_name: args.customer_name,
+                    customer_phone: args.customer_phone,
+                    pickup_address: args.pickup_address,
+                    delivery_address: args.delivery_address,
+                    status: args.status || "CREATED",
+                },
+                (error, response) => {
+                    if (error) reject(error);
+                    else resolve(response);
+                }
+            );
+        });
+    },
+
+    updateOrderStatus: ({ id, status }) => {
+        return new Promise((resolve, reject) => {
+            orderClient.UpdateOrderStatus({ id, status }, (error, response) => {
+                if (error) reject(error);
+                else resolve(response);
+            });
+        });
+    },
+
+    deleteOrder: ({ id }) => {
+        return new Promise((resolve, reject) => {
+            orderClient.DeleteOrder({ id }, (error, response) => {
+                if (error) reject(error);
+                else resolve(response);
+            });
+        });
+    },
+
+    createDelivery: (args) => {
+        return new Promise((resolve, reject) => {
+            deliveryClient.CreateDelivery(
+                {
+                    order_id: args.order_id,
+                    driver_id: args.driver_id,
+                    pickup_address: args.pickup_address,
+                    delivery_address: args.delivery_address,
+                    status: args.status || "ASSIGNED",
+                },
+                (error, response) => {
+                    if (error) reject(error);
+                    else resolve(response);
+                }
+            );
+        });
+    },
+
+    updateDeliveryStatus: ({ id, status }) => {
+        return new Promise((resolve, reject) => {
+            deliveryClient.UpdateDeliveryStatus({ id, status }, (error, response) => {
+                if (error) reject(error);
+                else resolve(response);
+            });
+        });
+    },
+
+    deleteDelivery: ({ id }) => {
+        return new Promise((resolve, reject) => {
+            deliveryClient.DeleteDelivery({ id }, (error, response) => {
+                if (error) reject(error);
+                else resolve(response);
+            });
+        });
+    },
+
+    createDriver: (args) => {
+        return new Promise((resolve, reject) => {
+            driverClient.CreateDriver(
+                {
+                    name: args.name,
+                    phone: args.phone,
+                    vehicle_type: args.vehicle_type,
+                    available: args.available,
+                    latitude: args.latitude,
+                    longitude: args.longitude,
+                },
+                (error, response) => {
+                    if (error) reject(error);
+                    else resolve(response);
+                }
+            );
+        });
+    },
+
+    updateDriverAvailability: ({ id, available }) => {
+        return new Promise((resolve, reject) => {
+            driverClient.UpdateDriverAvailability(
+                { id, available },
+                (error, response) => {
+                    if (error) reject(error);
+                    else resolve(response);
+                }
+            );
+        });
+    },
+
+    updateDriverLocation: ({ id, latitude, longitude }) => {
+        return new Promise((resolve, reject) => {
+            driverClient.UpdateDriverLocation(
+                { id, latitude, longitude },
+                (error, response) => {
+                    if (error) reject(error);
+                    else resolve(response);
+                }
+            );
+        });
+    },
+
+    deleteDriver: ({ id }) => {
+        return new Promise((resolve, reject) => {
+            driverClient.DeleteDriver({ id }, (error, response) => {
                 if (error) reject(error);
                 else resolve(response);
             });
